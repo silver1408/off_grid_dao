@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Off-Grid DAO — NFC-powered community governance kiosk for accessible voting and fund allocation.">
+    <title>Off-Grid DAO — Community Voting Kiosk</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- ═══════ BACKGROUND ELEMENTS ═══════ -->
+    <div class="bg-grid"></div>
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+    <div class="bg-glow bg-glow-3"></div>
+
+    <!-- ═══════ TOP BAR ═══════ -->
+    <header id="header">
+        <div class="header-left">
+            <div class="logo">
+                <span class="logo-icon">⛓️</span>
+                <span class="logo-text">OFF-GRID <span class="logo-accent">DAO</span></span>
+            </div>
+            <div class="header-tag">Community Governance Kiosk</div>
+        </div>
+        <div class="header-right">
+            <div class="status-indicator" id="connectionStatus">
+                <span class="status-dot"></span>
+                <span class="status-text">Connected</span>
+            </div>
+            <div class="treasury-badge" id="treasuryBadge">
+                <span class="treasury-icon">🏦</span>
+                <span class="treasury-amount" id="treasuryAmount">500,000</span>
+                <span class="treasury-label">DAO Tokens</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- ═══════ MAIN CONTENT ═══════ -->
+    <main id="mainContent">
+
+        <!-- ── STATE: BROWSE (See all proposals, pick one) ── -->
+        <section id="stateBrowse" class="state-section active">
+            <div class="browse-container">
+                <div class="browse-header">
+                    <h1 class="browse-title">Community Proposals</h1>
+                    <p class="browse-subtitle">Choose a proposal to delegate your vote — then tap your NFC card to confirm</p>
+                </div>
+                <div class="browse-stats">
+                    <div class="idle-stat">
+                        <span class="idle-stat-value" id="activeProposalCount">3</span>
+                        <span class="idle-stat-label">Active Proposals</span>
+                    </div>
+                    <div class="idle-stat-divider"></div>
+                    <div class="idle-stat">
+                        <span class="idle-stat-value" id="totalVoteCount">156</span>
+                        <span class="idle-stat-label">Votes Cast</span>
+                    </div>
+                    <div class="idle-stat-divider"></div>
+                    <div class="idle-stat">
+                        <span class="idle-stat-value" id="blockCount">0</span>
+                        <span class="idle-stat-label">Blocks</span>
+                    </div>
+                </div>
+                <div class="proposals-grid" id="proposalsGrid">
+                    <!-- Filled by JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- ── STATE: AWAITING TAP (Selection made, waiting for NFC) ── -->
+        <section id="stateAwaitTap" class="state-section">
+            <div class="await-container">
+                <!-- Selected proposal summary -->
+                <div class="selection-summary" id="selectionSummary">
+                    <div class="selection-badge" id="selectionVoteBadge">YES</div>
+                    <div class="selection-info">
+                        <span class="selection-label">Your Selection</span>
+                        <h2 class="selection-title" id="selectionTitle">Park Bench Renovation</h2>
+                        <p class="selection-funds" id="selectionFunds">45,000 DAO Tokens</p>
+                    </div>
+                    <button class="selection-change" id="btnChangeSelection" onclick="goBackToBrowse()">✕ Change</button>
+                </div>
+
+                <!-- NFC Tap prompt -->
+                <div class="tap-prompt">
+                    <div class="nfc-ring-container">
+                        <div class="nfc-ring nfc-ring-1"></div>
+                        <div class="nfc-ring nfc-ring-2"></div>
+                        <div class="nfc-ring nfc-ring-3"></div>
+                        <div class="nfc-icon">
+                            <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M32 44C38.6274 44 44 38.6274 44 32C44 25.3726 38.6274 20 32 20C25.3726 20 20 25.3726 20 32C20 38.6274 25.3726 44 32 44Z" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+                                <path d="M48 16C54.4 22.4 58 30.8 58 32C58 33.2 54.4 41.6 48 48" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+                                <path d="M16 48C9.6 41.6 6 33.2 6 32C6 30.8 9.6 22.4 16 16" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+                                <path d="M42 22C45.6 25.6 48 28.8 48 32C48 35.2 45.6 38.4 42 42" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+                                <path d="M22 42C18.4 38.4 16 35.2 16 32C16 28.8 18.4 25.6 22 22" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <h1 class="tap-title">Tap Your Card to Confirm</h1>
+                    <p class="tap-subtitle">Hold your NFC community card near the kiosk to sign and submit your vote to the blockchain</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── STATE: CONFIRMED (Vote recorded) ── -->
+        <section id="stateConfirmed" class="state-section">
+            <div class="confirmed-container">
+                <div class="confirm-checkmark">
+                    <svg class="checkmark-svg" viewBox="0 0 100 100">
+                        <circle class="checkmark-circle" cx="50" cy="50" r="45" fill="none" stroke-width="4"/>
+                        <path class="checkmark-check" d="M30 50 L45 65 L70 35" fill="none" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <h2 class="confirm-title">Vote Recorded on Chain!</h2>
+
+                <!-- Voter identity card -->
+                <div class="welcome-card" id="confirmVoterCard">
+                    <div class="welcome-avatar" id="voterAvatar">👵</div>
+                    <div class="welcome-info">
+                        <h2 class="welcome-name" id="voterName">Grandma Patel</h2>
+                        <p class="welcome-ward" id="voterWard">Sector 7, Green Park Colony</p>
+                        <div class="welcome-wallet">
+                            <span class="wallet-label">Wallet:</span>
+                            <span class="wallet-address" id="voterWallet">0x7a3B...f29E</span>
+                        </div>
+                    </div>
+                    <div class="welcome-verified">
+                        <span class="verified-icon">✓</span>
+                        <span class="verified-text">Verified</span>
+                    </div>
+                </div>
+
+                <p class="confirm-detail" id="confirmDetail">You voted YES on Park Bench Renovation</p>
+                <div class="confirm-tx" id="confirmTx">
+                    <span class="tx-label">TX</span>
+                    <span class="tx-hash" id="confirmTxHash">0x000...000</span>
+                </div>
+                <p class="confirm-reset">Returning to proposals in <span id="resetCountdown">15</span>s...</p>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ═══════ TRANSACTION FEED (Bottom ticker) ═══════ -->
+    <footer id="txFeed">
+        <div class="feed-label">⛓️ Live Blockchain Feed</div>
+        <div class="feed-scroll" id="feedScroll">
+            <div class="feed-item feed-item-genesis">
+                <span class="feed-block">#0</span>
+                <span class="feed-type">GENESIS</span>
+                <span class="feed-hash">0000000000000000</span>
+                <span class="feed-time">System Start</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Socket.io client loaded from server -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
