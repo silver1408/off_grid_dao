@@ -1,0 +1,74 @@
+.swapCard {
+  max-width: 640px;
+  width: 100%;
+  margin: 0 auto;
+  border-radius: var(--radius-lg);
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  padding: 24px;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.subtitle {
+  margin: 8px 0 20px;
+  color: var(--text-secondary);
+}
+
+.form {
+  display: grid;
+  gap: 14px;
+}
+
+.fieldLabel {
+  display: grid;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.field {
+  border: 1px solid var(--border-glass-hover);
+  background: rgba(17, 24, 39, 0.9);
+  color: var(--text-primary);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.submitBtn {
+  margin-top: 4px;
+  border: none;
+  border-radius: 12px;
+  padding: 12px;
+  cursor: pointer;
+  color: white;
+  font-weight: 700;
+  background: var(--gradient-primary);
+}
+
+.submitBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.statusMessage {
+  margin-top: 14px;
+  border-radius: 10px;
+  padding: 10px;
+  font-size: 0.9rem;
+}
+
+.error {
+  color: var(--accent-red);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.success {
+  color: var(--accent-green);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  background: rgba(16, 185, 129, 0.1);
+}

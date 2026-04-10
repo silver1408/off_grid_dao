@@ -1,0 +1,154 @@
+.header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px 24px;
+  background: rgba(10, 14, 26, 0.85);
+  border-bottom: 1px solid var(--border-glass);
+  backdrop-filter: blur(20px);
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+
+.logoAccent {
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.headerTag {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  border: 1px solid var(--border-glass);
+  padding: 4px 10px;
+  border-radius: 100px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.navLink {
+  text-decoration: none;
+  color: var(--text-secondary);
+  border: 1px solid transparent;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  transition: 0.2s ease;
+}
+
+.navLink:hover {
+  color: var(--text-primary);
+  border-color: var(--border-glass);
+  background: var(--bg-glass);
+}
+
+.navLinkActive {
+  color: var(--text-primary);
+  background: rgba(59, 130, 246, 0.2);
+  border-color: rgba(59, 130, 246, 0.4);
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.statusIndicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.connected {
+  color: var(--accent-green);
+}
+
+.connected .statusDot {
+  background: var(--accent-green);
+  box-shadow: 0 0 8px var(--accent-green);
+}
+
+.disconnected {
+  color: var(--accent-red);
+}
+
+.disconnected .statusDot {
+  background: var(--accent-red);
+  box-shadow: 0 0 8px var(--accent-red);
+}
+
+.treasuryBadge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border-glass);
+  background: var(--bg-glass);
+  padding: 8px 14px;
+  font-size: 0.85rem;
+}
+
+.treasuryAmount {
+  color: var(--accent-amber);
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+.treasuryLabel {
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+}
+
+@media (max-width: 960px) {
+  .header {
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 12px;
+  }
+
+  .headerTag,
+  .treasuryLabel,
+  .statusText {
+    display: none;
+  }
+
+  .headerRight {
+    width: 100%;
+    justify-content: center;
+  }
+}

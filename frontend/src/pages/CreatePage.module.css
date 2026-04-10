@@ -1,0 +1,59 @@
+.pageWrap {
+  width: 100%;
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 0 24px 30px;
+}
+
+.intro {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.intro h1 {
+  margin: 0;
+}
+
+.intro p {
+  margin: 8px 0 0;
+  color: var(--text-secondary);
+}
+
+.form {
+  border: 1px solid var(--border-glass);
+  background: var(--bg-glass);
+  border-radius: var(--radius-lg);
+  padding: 22px;
+  display: grid;
+  gap: 14px;
+}
+
+.fieldLabel {
+  display: grid;
+  gap: 8px;
+  color: var(--text-secondary);
+}
+
+.field,
+.textarea {
+  width: 100%;
+  border: 1px solid var(--border-glass-hover);
+  border-radius: 10px;
+  background: rgba(17, 24, 39, 0.9);
+  color: var(--text-primary);
+  padding: 10px 12px;
+}
+
+.textarea {
+  resize: vertical;
+}
+
+.submitBtn {
+  margin-top: 8px;
+  border: none;
+  border-radius: 12px;
+  padding: 12px;
+  font-weight: 700;
+  color: white;
+  background: linear-gradient(135deg, #64748b, #334155);
+}
