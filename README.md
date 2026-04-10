@@ -143,6 +143,3 @@ iPhone tap
 
 ---
 
-### What to Build First (Priority Order)
-
-Write and deploy the Solidity contract first — everything else depends on the contract address. Then build the `/nfc-auth` endpoint and test it with a manual `curl` call before touching the frontend. Then wire the React screens top to bottom. Leave the iPhone Shortcut for last — it takes 2 minutes and is the most impressive part of the live demo.
