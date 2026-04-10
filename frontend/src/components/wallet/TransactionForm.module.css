@@ -1,0 +1,33 @@
+.form {
+  display: grid;
+  gap: 12px;
+}
+
+.fieldLabel {
+  display: grid;
+  gap: 8px;
+  color: var(--text-secondary);
+}
+
+.field {
+  border: 1px solid var(--border-glass-hover);
+  border-radius: 10px;
+  background: rgba(17, 24, 39, 0.9);
+  color: var(--text-primary);
+  padding: 10px 12px;
+}
+
+.actionBtn {
+  border: none;
+  border-radius: 12px;
+  padding: 11px;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+  background: linear-gradient(135deg, #059669, #10b981);
+}
+
+.actionBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

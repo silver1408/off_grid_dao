@@ -3,17 +3,25 @@
   "version": "1.0.0",
   "description": "NFC-powered DAO community voting kiosk",
   "main": "server.js",
+  "type": "module",
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "build": "hardhat compile"
+    "build": "hardhat compile",
+    "compile": "hardhat compile",
+    "deploy": "hardhat run scripts/deploy.js --network localhost",
+    "node": "hardhat node"
   },
   "dependencies": {
     "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "ethers": "^6.15.0",
     "express": "^4.21.0",
     "socket.io": "^4.7.5"
   },
   "devDependencies": {
-    "hardhat": "^3.3.0"
+    "@nomicfoundation/hardhat-ethers": "^3.1.0",
+    "@nomicfoundation/hardhat-toolbox": "^6.1.2",
+    "hardhat": "^2.22.0"
   }
 }

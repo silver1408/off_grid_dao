@@ -4,6 +4,7 @@ import { DashboardLayout } from './components/layout/DashboardLayout';
 import { LoadingState } from './components/common/LoadingState';
 
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const WalletPage = lazy(() => import('./pages/WalletPage'));
 const SwapPage = lazy(() => import('./pages/SwapPage'));
 const ProposalsPage = lazy(() => import('./pages/ProposalsPage'));
 const CreatePage = lazy(() => import('./pages/CreatePage'));
@@ -16,6 +17,7 @@ function App() {
           <Route element={<DashboardLayout />}>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/wallet" element={<WalletPage />} />
             <Route path="/swap" element={<SwapPage />} />
             <Route path="/proposals" element={<ProposalsPage />} />
             <Route path="/create" element={<CreatePage />} />

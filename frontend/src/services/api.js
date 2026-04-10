@@ -1,4 +1,5 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+const DAO_API_BASE_URL = API_BASE_URL;
 
 async function request(path, options = {}) {
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -25,51 +26,114 @@ async function request(path, options = {}) {
 }
 
 export const daoApi = {
+  // Proposals
   getProposals() {
     return request('/proposals');
   },
 
-  getTransactions() {
-    return request('/transactions');
+  getProposal(id) {
+    return request(`/proposals/${id}`);
   },
 
+  createProposal({ title, description, fundsRequested = 0 }) {
+    return request('/proposals', {
+      method: 'POST',
+      body: JSON.stringify({ title, description, fundsRequested }),
+    });
+  },
+
+  // Voting
+  castVote({ proposalId, voteYes }) {
+    return request('/vote', {
+      method: 'POST',
+      body: JSON.stringify({ proposalId, voteYes }),
+    });
+  },
+
+  hasVoted(proposalId, voterAddress) {
+    return request(`/vote/${proposalId}/${voterAddress}`);
+  },
+
+  // Treasury
   getTreasury() {
     return request('/treasury');
   },
 
-  getCurrentVoter() {
-    return request('/current-voter');
-  },
-
-  castVote({ cardId, proposalId, vote }) {
-    return request('/vote', {
+  allocateFunds({ proposalId, amountEth }) {
+    return request('/treasury/allocate', {
       method: 'POST',
-      body: JSON.stringify({ cardId, proposalId, vote }),
+      body: JSON.stringify({ proposalId, amountEth }),
     });
   },
 
-  allocateFunds({ cardId, proposalId, amount }) {
-    return request('/fund', {
+  transferFromTreasury({ recipientAddress, amountEth }) {
+    return request('/treasury/transfer', {
       method: 'POST',
-      body: JSON.stringify({ cardId, proposalId, amount }),
+      body: JSON.stringify({ recipientAddress, amountEth }),
     });
   },
 
-  scanCard(cardId) {
-    const query = new URLSearchParams({ cardId });
-    return request(`/scan?${query.toString()}`);
+  // Transactions
+  getTransactions() {
+    return request('/transactions');
+  },
+
+  // NFC
+  registerNFC({ nfcId, walletAddress }) {
+    return request('/nfc-register', {
+      method: 'POST',
+      body: JSON.stringify({ nfcId, walletAddress }),
+    });
+  },
+
+  voteViaNFC({ nfcId, proposalId, voteYes }) {
+    const query = new URLSearchParams({ nfcId, proposalId, voteYes });
+    return request(`/nfc-vote?${query.toString()}`);
+  },
+
+  voteVNFC(params) {
+    return this.voteViaNFC(params);
   },
 
   async getInitialState() {
-    const [proposals, transactions, treasury, currentVoter] = await Promise.all([
+    const [proposals, treasury, transactions] = await Promise.all([
       this.getProposals(),
-      this.getTransactions(),
       this.getTreasury(),
-      this.getCurrentVoter(),
+      this.getTransactions(),
     ]);
 
-    return { proposals, transactions, treasury, currentVoter };
+    return {
+      proposals: proposals?.data || [],
+      treasury: treasury?.data || {},
+      transactions: transactions?.data || [],
+    };
   },
 };
 
-export { API_BASE_URL };
+export const walletApi = {
+  getBalance(address) {
+    const query = address ? `?address=${encodeURIComponent(address)}` : '';
+    return request(`/wallet/balance${query}`);
+  },
+
+  deposit(amountEth) {
+    return request('/wallet/deposit', {
+      method: 'POST',
+      body: JSON.stringify({ amountEth }),
+    });
+  },
+
+  withdraw(amountEth) {
+    return request('/wallet/withdraw', {
+      method: 'POST',
+      body: JSON.stringify({ amountEth }),
+    });
+  },
+
+  getWalletDetails(address) {
+    const query = address ? `?address=${encodeURIComponent(address)}` : '';
+    return request(`/wallet/details${query}`);
+  },
+};
+
+export { API_BASE_URL, DAO_API_BASE_URL };

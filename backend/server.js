@@ -1,299 +1,509 @@
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-const cors = require('cors');
-const crypto = require('crypto');
-const path = require('path');
+import express from "express";
+import http from "node:http";
+import { Server } from "socket.io";
+import cors from "cors";
+import path from "node:path";
+import dotenv from "dotenv";
+import { fileURLToPath } from "node:url";
+
+dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+import {
+  loadArtifact,
+  loadDAOArtifact,
+  getProvider,
+  getSigner,
+  getDAOContract,
+  getAllProposals,
+  getProposal,
+  createProposal,
+  castVote,
+  getTreasuryStatus,
+  allocateFunds,
+  transferFromTreasury,
+  hasUserVoted,
+  getUserVote,
+  onDAOProposalCreated,
+  onDAOVoteCasted,
+  onDAOFundsTransferred,
+  getWalletDetails,
+  getBalance,
+  deposit,
+  withdraw,
+} from "./services/blockchain.js";
 
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, "public")));
 
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
 // ─────────────────────────────────────────────
-//  SIMULATED BLOCKCHAIN
+// BLOCKCHAIN TRANSACTION LOG
 // ─────────────────────────────────────────────
-const blockchain = [];
+const transactionLog = [];
 
-function createTransaction(type, data) {
-    const prevHash = blockchain.length > 0
-        ? blockchain[blockchain.length - 1].hash
-        : '0000000000000000000000000000000000000000000000000000000000000000';
+// ─────────────────────────────────────────────
+// EVENT LISTENERS - REAL-TIME BLOCKCHAIN EVENTS
+// ─────────────────────────────────────────────
 
-    const timestamp = new Date().toISOString();
-    const payload = JSON.stringify({ type, data, timestamp, prevHash });
-    const hash = crypto.createHash('sha256').update(payload).digest('hex');
+function setupBlockchainEventListeners() {
+  console.log("🔌 Setting up blockchain event listeners...");
 
-    const tx = {
-        id: blockchain.length + 1,
-        type,        // 'IDENTITY_VERIFY' | 'VOTE_CAST' | 'FUND_TRANSFER'
-        data,
-        timestamp,
-        prevHash,
-        hash,
-    };
+  try {
+    onDAOProposalCreated((event) => {
+      console.log(`📋 ProposalCreated Event:`, event);
+      transactionLog.push({
+        type: "PROPOSAL_CREATED",
+        data: event,
+        timestamp: new Date().toISOString(),
+      });
 
-    blockchain.push(tx);
-    console.log(`⛓️  Block #${tx.id} | ${type} | ${hash.slice(0, 16)}...`);
-    return tx;
+      io.emit("proposal-created", {
+        event,
+        transaction: transactionLog[transactionLog.length - 1],
+      });
+    });
+
+    onDAOVoteCasted((event) => {
+      console.log(`🗳️  VoteCasted Event:`, event);
+      transactionLog.push({
+        type: "VOTE_CAST",
+        data: event,
+        timestamp: new Date().toISOString(),
+      });
+
+      io.emit("vote-cast", {
+        event,
+        transaction: transactionLog[transactionLog.length - 1],
+      });
+    });
+
+    onDAOFundsTransferred((event) => {
+      console.log(`💰 FundsTransferred Event:`, event);
+      transactionLog.push({
+        type: "FUNDS_TRANSFERRED",
+        data: event,
+        timestamp: new Date().toISOString(),
+      });
+
+      io.emit("funds-transferred", {
+        event,
+        transaction: transactionLog[transactionLog.length - 1],
+      });
+    });
+
+    console.log("✅ Event listeners registered");
+  } catch (error) {
+    console.warn("⚠️  Could not setup event listeners:", error.message);
+  }
 }
 
 // ─────────────────────────────────────────────
-//  VOTER REGISTRY (In-Memory for Demo)
-// ─────────────────────────────────────────────
-const voters = {
-    'Metro_Card_001': {
-        name: 'Grandma Patel',
-        avatar: '👵',
-        wallet: '0x7a3B...f29E',
-        ward: 'Sector 7, Green Park Colony',
-        votescast: 0,
-    },
-    'Metro_Card_002': {
-        name: 'Uncle Sharma',
-        avatar: '👴',
-        wallet: '0x9c1D...a83F',
-        ward: 'Sector 12, Riverside',
-        votescast: 0,
-    },
-    'Metro_Card_003': {
-        name: 'Auntie Mehra',
-        avatar: '👩',
-        wallet: '0x4e8A...b12C',
-        ward: 'Sector 3, Market Road',
-        votescast: 0,
-    },
-    // Fallback for any unknown card (e.g. your actual metro card)
-};
-
-function getVoter(cardId) {
-    if (voters[cardId]) return { cardId, ...voters[cardId] };
-    // For unknown cards, generate a demo identity
-    return {
-        cardId,
-        name: 'Community Member',
-        avatar: '🧑',
-        wallet: '0x' + crypto.createHash('md5').update(cardId).digest('hex').slice(0, 16),
-        ward: 'Local Resident',
-        votescast: 0,
-    };
-}
-
-// ─────────────────────────────────────────────
-//  COMMUNITY PROPOSALS
-// ─────────────────────────────────────────────
-const proposals = [
-    {
-        id: 1,
-        title: 'Park Bench Renovation',
-        description: 'Install 12 new solar-powered benches in Green Park with USB charging stations for residents.',
-        category: 'Infrastructure',
-        fundsRequested: 45000,
-        votesYes: 23,
-        votesNo: 5,
-        status: 'active',
-        votedBy: [],
-    },
-    {
-        id: 2,
-        title: 'Community Solar Panels',
-        description: 'Install rooftop solar panels on the community hall to reduce electricity bills by 60%.',
-        category: 'Energy',
-        fundsRequested: 120000,
-        votesYes: 41,
-        votesNo: 8,
-        status: 'active',
-        votedBy: [],
-    },
-    {
-        id: 3,
-        title: 'Free Wi-Fi Zones',
-        description: 'Set up 5 free Wi-Fi hotspots in public areas — park, market, bus stop, library, and temple.',
-        category: 'Digital',
-        fundsRequested: 30000,
-        votesYes: 67,
-        votesNo: 12,
-        status: 'active',
-        votedBy: [],
-    },
-];
-
-// Community Treasury
-const treasury = {
-    totalFunds: 500000,
-    allocated: 0,
-    currency: 'DAO Tokens',
-};
-
-// Track currently identified voter (for demo simplicity — single kiosk)
-let currentVoter = null;
-
-// ─────────────────────────────────────────────
-//  API ROUTES
+// API ROUTES - DAO PROPOSALS
 // ─────────────────────────────────────────────
 
-// NFC Scan → Identify Voter
-app.get('/scan', (req, res) => {
-    const cardId = req.query.cardId || 'Unknown_Card';
-    console.log(`\n📡 NFC SCAN DETECTED: ${cardId}`);
+app.post("/api/proposals", async (req, res) => {
+  try {
+    const { title, description, fundsRequested } = req.body;
 
-    const voter = getVoter(cardId);
-    currentVoter = voter;
+    if (!title || !description) {
+      return res
+        .status(400)
+        .json({ error: "Title and description are required" });
+    }
 
-    // Log to blockchain
-    const tx = createTransaction('IDENTITY_VERIFY', {
-        cardId,
-        voterName: voter.name,
-        wallet: voter.wallet,
-    });
-
-    // Broadcast to all connected dashboards
-    io.emit('card-scanned', {
-        voter,
-        transaction: tx,
-    });
+    const result = await createProposal(
+      title,
+      description,
+      fundsRequested || 0,
+    );
 
     res.json({
-        success: true,
-        message: `Welcome, ${voter.name}!`,
-        voter,
-        transactionHash: tx.hash,
+      success: true,
+      message: "Proposal created successfully",
+      data: result,
     });
+  } catch (error) {
+    console.error("Error creating proposal:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
 });
 
-// Cast a vote
-app.post('/vote', (req, res) => {
-    const { cardId, proposalId, vote } = req.body;
+app.get("/api/proposals", async (req, res) => {
+  try {
+    const proposals = await getAllProposals();
+    res.json({
+      success: true,
+      data: proposals,
+      count: proposals.length,
+    });
+  } catch (error) {
+    console.error("Error fetching proposals:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
-    if (!cardId || !proposalId || !vote) {
-        return res.status(400).json({ error: 'Missing cardId, proposalId, or vote' });
+app.get("/api/proposals/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const proposal = await getProposal(id);
+
+    res.json({
+      success: true,
+      data: proposal,
+    });
+  } catch (error) {
+    console.error("Error fetching proposal:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ─────────────────────────────────────────────
+// API ROUTES - DAO VOTING
+// ─────────────────────────────────────────────
+
+app.post("/api/vote", async (req, res) => {
+  try {
+    const { proposalId, voteYes } = req.body;
+
+    if (proposalId === undefined || voteYes === undefined) {
+      return res.status(400).json({
+        error: "proposalId and voteYes (boolean) are required",
+      });
     }
 
-    const proposal = proposals.find(p => p.id === proposalId);
-    if (!proposal) {
-        return res.status(404).json({ error: 'Proposal not found' });
-    }
+    const result = await castVote(proposalId, voteYes);
 
-    // Record vote (double-voting allowed for demo purposes)
-    if (vote === 'yes') {
-        proposal.votesYes++;
-    } else {
-        proposal.votesNo++;
-    }
+    res.json({
+      success: true,
+      message: "Vote recorded on blockchain",
+      data: result,
+    });
+  } catch (error) {
+    console.error("Error casting vote:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
-    const voter = getVoter(cardId);
-    if (voters[cardId]) voters[cardId].votescast++;
+app.get("/api/vote/:proposalId/:voterAddress", async (req, res) => {
+  try {
+    const { proposalId, voterAddress } = req.params;
+    const hasVoted = await hasUserVoted(proposalId, voterAddress);
+    const vote = hasVoted ? await getUserVote(proposalId, voterAddress) : null;
 
-    // Log to blockchain
-    const tx = createTransaction('VOTE_CAST', {
-        cardId,
-        voterName: voter.name,
+    res.json({
+      success: true,
+      data: {
         proposalId,
-        proposalTitle: proposal.title,
+        voterAddress,
+        hasVoted,
         vote,
+      },
     });
+  } catch (error) {
+    console.error("Error checking vote:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
-    console.log(`🗳️  VOTE: ${voter.name} voted "${vote}" on "${proposal.title}"`);
+// ─────────────────────────────────────────────
+// API ROUTES - TREASURY
+// ─────────────────────────────────────────────
 
-    // Broadcast update
-    io.emit('vote-recorded', {
-        voter,
-        proposal,
-        vote,
-        transaction: tx,
-    });
+app.get("/api/treasury", async (req, res) => {
+  try {
+    const treasury = await getTreasuryStatus();
 
     res.json({
-        success: true,
-        message: `Vote recorded: ${vote} on "${proposal.title}"`,
-        transactionHash: tx.hash,
+      success: true,
+      data: treasury,
     });
+  } catch (error) {
+    console.error("Error fetching treasury:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
 });
 
-// Allocate funds to a proposal
-app.post('/fund', (req, res) => {
-    const { cardId, proposalId, amount } = req.body;
+app.post("/api/treasury/allocate", async (req, res) => {
+  try {
+    const { proposalId, amountEth } = req.body;
 
-    const proposal = proposals.find(p => p.id === proposalId);
-    if (!proposal) return res.status(404).json({ error: 'Proposal not found' });
+    if (!proposalId || !amountEth) {
+      return res
+        .status(400)
+        .json({ error: "proposalId and amountEth are required" });
+    }
 
-    const voter = getVoter(cardId || 'system');
+    const result = await allocateFunds(proposalId, amountEth);
 
-    const tx = createTransaction('FUND_TRANSFER', {
-        from: voter.wallet,
-        to: `Proposal #${proposalId}: ${proposal.title}`,
-        amount,
-        currency: treasury.currency,
+    res.json({
+      success: true,
+      message: "Funds allocated successfully",
+      data: result,
     });
+  } catch (error) {
+    console.error("Error allocating funds:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
-    treasury.allocated += amount;
+app.post("/api/treasury/transfer", async (req, res) => {
+  try {
+    const { recipientAddress, amountEth } = req.body;
 
-    io.emit('fund-allocated', {
-        voter,
-        proposal,
-        amount,
-        treasury,
-        transaction: tx,
+    if (!recipientAddress || !amountEth) {
+      return res
+        .status(400)
+        .json({ error: "recipientAddress and amountEth are required" });
+    }
+
+    const result = await transferFromTreasury(recipientAddress, amountEth);
+
+    res.json({
+      success: true,
+      message: "Funds transferred from treasury",
+      data: result,
     });
-
-    res.json({ success: true, transactionHash: tx.hash, treasury });
-});
-
-// Get all proposals
-app.get('/proposals', (req, res) => {
-    res.json(proposals);
-});
-
-// Get transaction history
-app.get('/transactions', (req, res) => {
-    res.json(blockchain.slice(-50)); // last 50
-});
-
-// Get treasury status
-app.get('/treasury', (req, res) => {
-    res.json(treasury);
-});
-
-// Get current voter
-app.get('/current-voter', (req, res) => {
-    res.json(currentVoter);
+  } catch (error) {
+    console.error("Error transferring from treasury:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
 });
 
 // ─────────────────────────────────────────────
-//  SOCKET.IO
+// API ROUTES - WALLET
 // ─────────────────────────────────────────────
-io.on('connection', (socket) => {
-    console.log('🔌 Dashboard connected:', socket.id);
 
-    // Send current state on connect
-    socket.emit('init', {
+app.get("/api/wallet/balance", async (req, res) => {
+  try {
+    const data = await getBalance(req.query.address);
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.get("/api/wallet/details", async (req, res) => {
+  try {
+    const data = await getWalletDetails(req.query.address);
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post("/api/wallet/deposit", async (req, res) => {
+  try {
+    const { amountEth } = req.body;
+    const data = await deposit(amountEth);
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
+app.post("/api/wallet/withdraw", async (req, res) => {
+  try {
+    const { amountEth } = req.body;
+    const data = await withdraw(amountEth);
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
+// ─────────────────────────────────────────────
+// API ROUTES - NFC VOTING
+// ─────────────────────────────────────────────
+
+// Map nfcId -> wallet address (for demo purposes)
+const nfcRegistry = {
+  nfc_001: "0x8ba1f109551bd432803012645ac136ddd64dba72",
+  nfc_002: "0x71c7656ec7ab88b098defb751b7401b5f6d8976f",
+  nfc_003: "0xfe3b557e8fb62b89f4b666542121c5c21d544566",
+};
+
+app.get("/api/nfc-vote", async (req, res) => {
+  try {
+    const { nfcId, proposalId, voteYes } = req.query;
+
+    if (!nfcId || proposalId === undefined || voteYes === undefined) {
+      return res.status(400).json({
+        error: "nfcId, proposalId, and voteYes query parameters required",
+      });
+    }
+
+    const voterAddress = nfcRegistry[nfcId];
+    if (!voterAddress) {
+      return res
+        .status(404)
+        .json({ error: "NFC ID not registered. Please register first." });
+    }
+
+    // Check if already voted
+    const alreadyVoted = await hasUserVoted(proposalId, voterAddress);
+    if (alreadyVoted) {
+      return res
+        .status(400)
+        .json({ error: "You have already voted on this proposal" });
+    }
+
+    // Cast vote
+    const voteBoolean = voteYes === "true" || voteYes === "1";
+    const result = await castVote(proposalId, voteBoolean);
+
+    res.json({
+      success: true,
+      message: `Vote recorded: ${voteBoolean ? "YES" : "NO"}`,
+      data: {
+        ...result,
+        nfcId,
+        voterAddress,
+      },
+    });
+  } catch (error) {
+    console.error("Error processing NFC vote:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post("/api/nfc-register", (req, res) => {
+  try {
+    const { nfcId, walletAddress } = req.body;
+
+    if (!nfcId || !walletAddress) {
+      return res
+        .status(400)
+        .json({ error: "nfcId and walletAddress are required" });
+    }
+
+    nfcRegistry[nfcId] = walletAddress;
+
+    res.json({
+      success: true,
+      message: "NFC ID registered",
+      data: {
+        nfcId,
+        walletAddress,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ─────────────────────────────────────────────
+// API ROUTES - TRANSACTION LOG
+// ─────────────────────────────────────────────
+
+app.get("/api/transactions", (req, res) => {
+  res.json({
+    success: true,
+    data: transactionLog.slice(-50),
+    count: transactionLog.length,
+  });
+});
+
+// ─────────────────────────────────────────────
+// HEALTH CHECK
+// ─────────────────────────────────────────────
+
+app.get("/health", async (req, res) => {
+  try {
+    const provider = getProvider();
+    const blockNumber = await provider.getBlockNumber();
+    const signer = await getSigner();
+    const signerAddress = await signer.getAddress();
+
+    res.json({
+      success: true,
+      status: "healthy",
+      data: {
+        blockNumber,
+        signerAddress,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      status: "unhealthy",
+      error: error.message,
+    });
+  }
+});
+
+// ─────────────────────────────────────────────
+// SOCKET.IO - REAL-TIME UPDATES
+// ─────────────────────────────────────────────
+
+io.on("connection", (socket) => {
+  console.log("🔌 Dashboard connected:", socket.id);
+
+  // Send current state on connect
+  (async () => {
+    try {
+      const proposals = await getAllProposals();
+      const treasury = await getTreasuryStatus();
+
+      socket.emit("init", {
         proposals,
-        transactions: blockchain.slice(-20),
+        transactions: transactionLog.slice(-20),
         treasury,
-        currentVoter,
-    });
+        connectedAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error("Error sending init state:", error);
+      socket.emit("error", { message: "Failed to load initial state" });
+    }
+  })();
 
-    socket.on('disconnect', () => {
-        console.log('❌ Dashboard disconnected:', socket.id);
-    });
+  socket.on("disconnect", () => {
+    console.log("❌ Dashboard disconnected:", socket.id);
+  });
 });
 
 // ─────────────────────────────────────────────
-//  START SERVER
+// START SERVER
 // ─────────────────────────────────────────────
-const PORT = 3001;
-server.listen(PORT, '0.0.0.0', () => {
-    console.log('');
-    console.log('═══════════════════════════════════════════════');
-    console.log('   🏛️  OFF-GRID DAO — Community Voting Kiosk');
-    console.log('═══════════════════════════════════════════════');
-    console.log(`   Dashboard:  http://localhost:${PORT}`);
-    console.log(`   NFC Scan:   http://localhost:${PORT}/scan?cardId=Metro_Card_001`);
-    console.log(`   Proposals:  http://localhost:${PORT}/proposals`);
-    console.log('═══════════════════════════════════════════════');
-    console.log('   Waiting for NFC card tap...');
-    console.log('');
-});
+const PORT = Number(process.env.PORT || 5000);
+
+async function startServer() {
+  try {
+    console.log("📦 Loading artifacts...");
+    loadArtifact();
+    console.log("✅ SimpleWallet artifact loaded");
+
+    loadDAOArtifact();
+    console.log("✅ DAO artifact loaded");
+
+    // Setup event listeners
+    setupBlockchainEventListeners();
+
+    server.listen(PORT, "0.0.0.0", () => {
+      console.log("");
+      console.log("═══════════════════════════════════════════════");
+      console.log("   🏛️  OFF-GRID DAO — Blockchain-Powered");
+      console.log("═══════════════════════════════════════════════");
+      console.log(`   API Base:    http://localhost:${PORT}/api`);
+      console.log(`   Proposals:   http://localhost:${PORT}/api/proposals`);
+      console.log(`   Treasury:    http://localhost:${PORT}/api/treasury`);
+      console.log(`   Health:      http://localhost:${PORT}/health`);
+      console.log(`   Dashboard:   http://localhost:${PORT}`);
+      console.log("═══════════════════════════════════════════════");
+      console.log("   Ready for blockchain interactions...");
+      console.log("");
+    });
+  } catch (error) {
+    console.error("❌ Failed to start server:", error.message);
+    process.exitCode = 1;
+  }
+}
+
+startServer();

@@ -3,6 +3,7 @@ import styles from './Navbar.module.css';
 
 const ROUTES = [
   { to: '/dashboard', label: 'Dashboard' },
+  { to: '/wallet', label: 'Wallet' },
   { to: '/swap', label: 'Swap' },
   { to: '/proposals', label: 'Proposals' },
   { to: '/create', label: 'Create' },
